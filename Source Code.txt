@@ -1,0 +1,110 @@
+#Import Libraries:
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+pd.set_option('display.max_columns', 20)
+
+#Load Dataset:
+df = pd.read_csv('C:\\Users\\Dell\\Desktop\\titanic.csv')
+print(df.head())
+
+#EXPLORATORY DATA ANALYSIS:
+#Missing Data:
+nullvalue = df.isnull()
+print(nullvalue)
+
+sns.heatmap(df.isnull(), yticklabels=False)
+plt.show()#Figure_1
+#Roughly 20% of age data is missing. The proportion of age missing is likely small enough for reasonable replacement with some form of imputation.
+
+#Basic Visualization For Deep Understanding Of Data:
+sns.set_style('whitegrid')
+sns.countplot('Survived', data=df)
+plt.show()#Figure_2
+
+sns.set_style('whitegrid')
+sns.countplot('Survived', hue='Sex', data=df, palette='RdBu_r')
+plt.show()#Figure_3
+
+sns.set_style('whitegrid')
+sns.countplot('Survived', hue='Pclass', data=df, palette='rainbow')
+plt.show()#Figure_4
+
+sns.distplot(df['Age'].dropna(), kde=False, color='darkred', bins=40)#df['Age'].hist(bins=30, color='darkred',alpha=0.3) => will get same result.
+plt.show()#Figure_5
+
+sns.countplot('SibSp', data=df)
+plt.show()#Figure_6
+
+df['Fare'].hist(color='green', bins=40, figsize=(8,4))
+plt.show()#Figure_7
+
+#Data Cleaning:
+#Replacement For Null Value:
+#{We want to fill in the age data instead of just dropping age column, one to do is by filling in the mean age of all the passengers.
+plt.figure(figsize=(12,7))
+sns.boxplot('Pclass', 'Age', data=df, palette='winter')
+plt.show()#Figure_8
+
+#To replace null values at age column.
+def impute_age(cols):
+    Age = cols[0]
+    Pclass = cols[1]
+    if pd.isnull(Age):
+        if Pclass == 1:
+            return 37
+        elif Pclass == 2:
+            return 29
+        else:
+            return 24
+    else:
+        return Age
+
+df['Age'] = df[['Age','Pclass']].apply(impute_age, axis=1)
+
+sns.heatmap(df.isnull(), yticklabels=False)
+plt.show()#Figure_9
+
+#Dropping Cabin column as there are many null values:
+df.drop('Cabin', axis=1, inplace=True)
+print(df.head())
+
+sns.heatmap(df.isnull(), yticklabels=False)
+plt.show()#Figure_10
+
+#Converting Categorical Features:
+Sex = pd.get_dummies(df['Sex'], drop_first=True)
+print(Sex.head())
+Embarked = pd.get_dummies(df['Embarked'], drop_first=True)
+print(Embarked)
+
+df.drop(['Sex','Embarked','Name','Ticket'],axis=1,inplace=True)
+print(df.head())
+
+#Now append Sex and Embarked with df:
+df = pd.concat([df, Sex, Embarked], axis=1)
+print(df.head())
+
+#Building a Logistic Regression Model:
+#Train-Test Split
+print(df.drop('Survived', axis=1).head())#Train Dataset
+print(df['Survived'].head())#Output Dataset
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(df.drop('Survived', axis=1), df['Survived'], test_size=0.3, random_state=101)
+
+#Training and Predicting
+from sklearn.linear_model import LogisticRegression
+logmodel = LogisticRegression()
+logmodel.fit(X_train, y_train)
+prediction = logmodel.predict(X_test)
+
+from sklearn.metrics import confusion_matrix
+accuracy = confusion_matrix(y_test, prediction)
+print(accuracy)
+
+from sklearn.metrics import accuracy_score
+accuracy = accuracy_score(y_test, prediction)
+print(accuracy)
